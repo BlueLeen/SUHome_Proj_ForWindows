@@ -1,6 +1,6 @@
 #pragma once
 
-#include <WinSock.h>
+#include <WinSock2.h>
 #include <io.h>
 
 int start_server_socket(SOCKET& sockSrvfd, int nConnPort)

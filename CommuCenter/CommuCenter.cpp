@@ -4,9 +4,12 @@
 #include "stdafx.h"
 #include "CommuCenter.h"
 #include "sockcomm.h"
+#include "FileOpp.h"
+#include  <afxpriv.h>
 
 #define MAX_LOADSTRING 100
 #define SOCKET_START_TOKEN  "Start-Leen:Welcome to my server\n"
+#define APK_CFG_DIR		    _T("apkdir")
 
 // 全局变量:
 HINSTANCE hInst;								// 当前实例
@@ -215,18 +218,63 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter)
 
 DWORD WINAPI ThreadSend(LPVOID lpParameter)
 {
+	TCHAR szFile[MAX_PACKAGE_NAME];
+	CString csValue;
+	long long dirTime;
+	long long dirOldTime;
 	char buf[BUFSIZ];  //数据传送的缓冲区 
 	int len = 0;
 	SOCKET sockClient = (SOCKET)lpParameter;
-	while((len=receive_socket_packs(sockClient, buf,BUFSIZ))>0)
-	{   
-		printf("%s\n",buf); 
-		if(send_socket_packs(sockClient,buf,len)<0)  
-		{  
-			perror("write");  
-			return 1;  
-		}  
+	_stprintf(szFile, _T("%s\\%s"), APK_PATH_PARENT, APK_CFG_NAME);
+	RegTool::GetPrivateProfileString(APK_CFG_INFO, APK_CFG_DIR, csValue, szFile);
+	dirTime = _tstoi64(csValue.GetBuffer());
+	receive_socket_packs(sockClient, buf, BUFSIZ);
+	dirOldTime = _atoi64(buf);
+	if (dirTime == dirOldTime)
+		printf("%s\n", buf);
+	else
+	{
+		strcpy(buf, "-up");
+		send_socket_packs(sockClient, buf, strlen(buf));
+		CStringArray apkArray;
+		NeedUpdateApks(apkArray);
+		for (int i = 0; i < apkArray.GetSize(); i++)
+		{
+			CString csFileName;
+			CFile file;
+			//int fileLength = 0;
+			int readLen = BUFSIZ;
+			int sendFileLength = 0;
+			csFileName.Format(_T("%s\\%s.apk"), APK_PATH, apkArray[i]);
+			file.Open(csFileName, CFile::modeRead | CFile::typeBinary);
+			//fileLength = file.GetLength();
+			USES_CONVERSION;
+			char* szFile = T2A(apkArray[i]);
+			sprintf(buf, "s %s", szFile);
+			send_socket_packs(sockClient, buf, strlen(buf));
+			while (readLen)
+			{
+				file.Seek(sendFileLength, CFile::begin);
+				int readLen = file.Read(buf, BUFSIZ);
+				if (send_socket_packs(sockClient, buf, readLen)<0)
+				{
+					perror("write");
+					return 1;
+				}
+				sendFileLength += readLen;
+			}
+			sprintf(buf, "e %s", szFile);
+			send_socket_packs(sockClient, buf, strlen(buf));
+		}
 	}
+	//while((len=receive_socket_packs(sockClient, buf,BUFSIZ))>0)
+	//{   
+	//	if(send_socket_packs(sockClient,buf,len)<0)  
+	//	{  
+	//		perror("write");  
+	//		return 1;  
+	//	}  
+	//}
 	return 0;
 }
 
