@@ -169,6 +169,7 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter)
 {
 	SOCKET sockSrv;
 	start_server_socket(sockSrv, 8000);
+	//wait for the client to connect
 	while(TRUE)
 	{
 		SOCKET sockClt;
