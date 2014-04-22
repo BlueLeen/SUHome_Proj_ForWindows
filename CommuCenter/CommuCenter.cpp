@@ -234,37 +234,52 @@ DWORD WINAPI ThreadSend(LPVOID lpParameter)
 		printf("%s\n", buf);
 	else
 	{
+		memset(buf, 0, sizeof(buf));
 		strcpy(buf, "-up");
-		send_socket_packs(sockClient, buf, strlen(buf));
+		send_socket_packs(sockClient, buf, strlen(buf)+1);
+		receive_socket_packs(sockClient, buf, BUFSIZ);
 		CStringArray apkArray;
 		NeedUpdateApks(apkArray);
 		for (int i = 0; i < apkArray.GetSize(); i++)
 		{
 			CString csFileName;
-			CFile file;
+			FILE* fp;
 			//int fileLength = 0;
 			int readLen = BUFSIZ;
-			int sendFileLength = 0;
 			csFileName.Format(_T("%s\\%s.apk"), APK_PATH, apkArray[i]);
-			file.Open(csFileName, CFile::modeRead | CFile::typeBinary);
-			//fileLength = file.GetLength();
 			USES_CONVERSION;
+			char* szFilePath = T2A(csFileName.GetBuffer(0));
+			fp = fopen(szFilePath, "rb");
+			//fileLength = file.GetLength();
 			char* szFile = T2A(apkArray[i]);
+			memset(buf, 0, sizeof(buf));
 			sprintf(buf, "s %s", szFile);
-			send_socket_packs(sockClient, buf, strlen(buf));
-			while (readLen)
+			send_socket_packs(sockClient, buf, strlen(buf)+1);
+			while (readLen>0)
 			{
-				file.Seek(sendFileLength, CFile::begin);
-				int readLen = file.Read(buf, BUFSIZ);
-				if (send_socket_packs(sockClient, buf, readLen)<0)
-				{
-					perror("write");
-					return 1;
-				}
-				sendFileLength += readLen;
+				//file.Seek(sendFileLength, CFile::begin);
+				readLen = fread(buf, 1, BUFSIZ, fp);
+				//if (readLen == 0)
+				//{
+				//	sprintf(buf, "\0", szFile);
+				//	send_socket_packs(sockClient, buf, strlen(buf)+1);
+				//}
+				//else
+				//{
+					if (send_socket_packs(sockClient, buf, readLen)<0)
+					{
+						perror("write");
+						fclose(fp);
+						return 1;
+					}
+				//}
 			}
-			sprintf(buf, "e %s", szFile);
-			send_socket_packs(sockClient, buf, strlen(buf));
+			//sprintf(buf, "e %s", szFile);
+			//send_socket_packs(sockClient, buf, strlen(buf));
+			//while (true);
+			receive_socket_packs(sockClient, buf, BUFSIZ);
+			Sleep(1000);
+			fclose(fp);
 		}
 	}
 	//while((len=receive_socket_packs(sockClient, buf,BUFSIZ))>0)
