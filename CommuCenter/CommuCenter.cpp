@@ -255,80 +255,21 @@ DWORD WINAPI ThreadSend(LPVOID lpParameter)
 			memset(buf, 0, sizeof(buf));
 			sprintf(buf, "s %s", szFile);
 			send_socket_packs(sockClient, buf, strlen(buf)+1);
-			while (readLen>0)
+			while ((readLen = fread(buf, 1, BUFSIZ, fp)) > 0)
 			{
-				//file.Seek(sendFileLength, CFile::begin);
 				readLen = fread(buf, 1, BUFSIZ, fp);
-				//if (readLen == 0)
-				//{
-				//	sprintf(buf, "\0", szFile);
-				//	send_socket_packs(sockClient, buf, strlen(buf)+1);
-				//}
-				//else
-				//{
-					if (send_socket_packs(sockClient, buf, readLen)<0)
-					{
-						perror("write");
-						fclose(fp);
-						return 1;
-					}
-				//}
+				if (send_socket_packs(sockClient, buf, readLen)<0)
+				{
+					perror("write");
+					fclose(fp);
+					return 1;
+				}
+				//write(sockClient, buf, readLen);
 			}
-			//sprintf(buf, "e %s", szFile);
-			//send_socket_packs(sockClient, buf, strlen(buf));
-			//while (true);
 			receive_socket_packs(sockClient, buf, BUFSIZ);
 			Sleep(1000);
 			fclose(fp);
 		}
 	}
-	//while((len=receive_socket_packs(sockClient, buf,BUFSIZ))>0)
-	//{   
-	//	if(send_socket_packs(sockClient,buf,len)<0)  
-	//	{  
-	//		perror("write");  
-	//		return 1;  
-	//	}  
-	//}
 	return 0;
 }
-
-//DWORD WINAPI ThreadProc(LPVOID lpParameter)
-//{
-//	SOCKET sockSrv;
-//	start_server_socket(sockSrv, 8000);
-//	while(TRUE)
-//	{
-//		SOCKET sockClt;
-//		char buf[BUFSIZ];  //数据传送的缓冲区  
-//		int len = 0;
-//		accept_client_socket(sockClt, sockSrv);
-//		try
-//		{
-//			if (sockClt != INVALID_SOCKET)
-//			{
-//				printf("%s\n", buf);
-//				long long ulTime = _atoi64(buf);
-//				printf("%lld\n", ulTime);
-//				receive_socket_packs(sockSrv, buf,BUFSIZ);
-//				send_socket_packs(sockClt, "Welcome to my server\n", 21);//发送欢迎信息  
-//				while((len=receive_socket_packs(sockClt, buf,BUFSIZ))>0)
-//				{   
-//					printf("%s\n",buf); 
-//					if(send_socket_packs(sockClt,buf,len)<0)  
-//					{  
-//						perror("write");  
-//						return 1;  
-//					}  
-//				}
-//			}
-//			close_client_socket(sockClt);
-//		}
-//		catch (...)
-//		{
-//			close_client_socket(sockClt);
-//		}
-//	}
-//	close_server_socket(sockSrv);
-//	return 0;
-//}
