@@ -10,6 +10,7 @@
 #define MAX_LOADSTRING 100
 #define SOCKET_START_TOKEN  "Start-Leen:Welcome to my server\n"
 #define APK_CFG_DIR		    _T("apkdir")
+#define ROW_SIZE			20
 
 // 全局变量:
 HINSTANCE hInst;								// 当前实例
@@ -222,7 +223,7 @@ DWORD WINAPI ThreadSend(LPVOID lpParameter)
 	CString csValue;
 	long long dirTime;
 	long long dirOldTime;
-	char buf[BUFSIZ];  //数据传送的缓冲区 
+	char buf[BUFSIZ+4];  //数据传送的缓冲区 
 	int len = 0;
 	SOCKET sockClient = (SOCKET)lpParameter;
 	_stprintf(szFile, _T("%s\\%s"), APK_PATH_PARENT, APK_CFG_NAME);
@@ -255,18 +256,26 @@ DWORD WINAPI ThreadSend(LPVOID lpParameter)
 			memset(buf, 0, sizeof(buf));
 			sprintf(buf, "s %s", szFile);
 			send_socket_packs(sockClient, buf, strlen(buf)+1);
-			while ((readLen = fread(buf, 1, BUFSIZ, fp)) > 0)
+			while ((readLen = fread(buf+4, 1, ROW_SIZE, fp)) > 0)
 			{
-				readLen = fread(buf, 1, BUFSIZ, fp);
-				if (send_socket_packs(sockClient, buf, readLen)<0)
+				if (readLen <= 0) break;
+				memcpy(buf, (void*)&readLen, 4);
+				if (send_socket_packs(sockClient, buf, readLen+4)<0)
 				{
 					perror("write");
 					fclose(fp);
 					return 1;
 				}
 				//write(sockClient, buf, readLen);
+				receive_socket_packs(sockClient, buf, BUFSIZ);
+				int recvLen = (int)(*buf);
+				if (recvLen < readLen)
+				{
+					break;
+				}
+				memset(buf, 0, BUFSIZ);
 			}
-			receive_socket_packs(sockClient, buf, BUFSIZ);
+			//receive_socket_packs(sockClient, buf, BUFSIZ);
 			Sleep(1000);
 			fclose(fp);
 		}
