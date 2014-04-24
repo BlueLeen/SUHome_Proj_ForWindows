@@ -195,15 +195,6 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter)
 					ResumeThread(hThread);
 					WaitForSingleObject(hThread, INFINITE);
 					CloseHandle(hThread);
-					//while((len=receive_socket_packs(sockClt, buf,BUFSIZ))>0)
-					//{   
-					//	printf("%s\n",buf); 
-					//	if(send_socket_packs(sockClt,buf,len)<0)  
-					//	{  
-					//		perror("write");  
-					//		return 1;  
-					//	}  
-					//}
 				}
 			}
 			close_client_socket(sockClt);
@@ -229,55 +220,64 @@ DWORD WINAPI ThreadSend(LPVOID lpParameter)
 	_stprintf(szFile, _T("%s\\%s"), APK_PATH_PARENT, APK_CFG_NAME);
 	RegTool::GetPrivateProfileString(APK_CFG_INFO, APK_CFG_DIR, csValue, szFile);
 	dirTime = _tstoi64(csValue.GetBuffer());
-	receive_socket_packs(sockClient, buf, BUFSIZ);
-	dirOldTime = _atoi64(buf);
-	if (dirTime == dirOldTime)
-		printf("%s\n", buf);
-	else
+	//receive_socket_packs(sockClient, buf, BUFSIZ);
+	//dirOldTime = _atoi64(buf);
+	//if (dirTime == dirOldTime)
+	//	printf("%s\n", buf);
+	//else
 	{
 		memset(buf, 0, sizeof(buf));
 		strcpy(buf, "-up");
-		send_socket_packs(sockClient, buf, strlen(buf)+1);
-		receive_socket_packs(sockClient, buf, BUFSIZ);
-		CStringArray apkArray;
-		NeedUpdateApks(apkArray);
-		for (int i = 0; i < apkArray.GetSize(); i++)
-		{
-			CString csFileName;
-			FILE* fp;
-			//int fileLength = 0;
-			int readLen = BUFSIZ;
-			csFileName.Format(_T("%s\\%s.apk"), APK_PATH, apkArray[i]);
-			USES_CONVERSION;
-			char* szFilePath = T2A(csFileName.GetBuffer(0));
-			fp = fopen(szFilePath, "rb");
-			//fileLength = file.GetLength();
-			char* szFile = T2A(apkArray[i]);
-			memset(buf, 0, sizeof(buf));
-			sprintf(buf, "s %s", szFile);
-			send_socket_packs(sockClient, buf, strlen(buf)+1);
-			while ((readLen = fread(buf+4, 1, ROW_SIZE, fp)) > 0)
+		//send_socket_packs(sockClient, buf, strlen(buf)+1);
+		//receive_socket_packs(sockClient, buf, BUFSIZ);
+
+		//while (true)
+		//{
+			CStringArray apkArray;
+			NeedUpdateApks(apkArray);
+			for (int i = 0; i < apkArray.GetSize(); i++)
 			{
-				if (readLen <= 0) break;
-				memcpy(buf, (void*)&readLen, 4);
-				if (send_socket_packs(sockClient, buf, readLen+4)<0)
-				{
-					perror("write");
-					fclose(fp);
-					return 1;
-				}
-				//write(sockClient, buf, readLen);
-				receive_socket_packs(sockClient, buf, BUFSIZ);
-				int recvLen = (int)(*buf);
-				if (recvLen < readLen)
-				{
-					break;
-				}
-				memset(buf, 0, BUFSIZ);
-			}
-			//receive_socket_packs(sockClient, buf, BUFSIZ);
-			Sleep(1000);
-			fclose(fp);
+				////FILE* fp;
+				unsigned char* pBuf = NULL;
+				////CString csFileName;
+				////int fileLength = 0;
+				////int readLen = BUFSIZ;
+				//csFileName.Format(_T("%s\\%s.apk"), APK_PATH, apkArray[i]);
+				//USES_CONVERSION;
+				//char* szFilePath = T2A(csFileName.GetBuffer(0));
+				//fp = fopen(szFilePath, "rb");
+				////fileLength = file.GetLength();
+				//char* szFile = T2A(apkArray[i]);
+				//memset(buf, 0, sizeof(buf));
+				//sprintf(buf, "s %s", szFile);
+				////send_socket_packs(sockClient, buf, strlen(buf)+1);
+				
+				//while ((readLen = fread(buf + 4, 1, ROW_SIZE, fp)) > 0)
+				//{
+				//	if (readLen <= 0) break;
+				//	memcpy(buf, (void*)&readLen, 4);
+				//	if (send_socket_packs(sockClient, buf, readLen + 4)<0)
+				//	{
+				//		perror("write");
+				//		fclose(fp);
+				//		return 1;
+				//	}
+				//	//write(sockClient, buf, readLen);
+				//	//receive_socket_packs(sockClient, buf, BUFSIZ);
+				//	int recvLen = (int)(*buf);
+				//	if (recvLen < readLen)
+				//	{
+				//		break;
+				//	}
+				//	memset(buf, 0, BUFSIZ);
+
+				//}
+				int readLen = GetFileByte(&pBuf, apkArray[i]);
+				send_socket_packs(sockClient, (char*)pBuf, readLen);
+				Sleep(1000);
+				////fclose(fp);
+			//}
+		//receive_socket_packs(sockClient, buf, BUFSIZ);
 		}
 	}
 	return 0;

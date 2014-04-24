@@ -8,6 +8,8 @@
 #define APK_CFG_NAME		_T("ApkCfg.ini")
 #define APK_CFG_INFO		_T("INFO")
 
+#define TINYSIZE			50
+
 CString AttractFileName(CString csFileName)
 {
 	int nFind = csFileName.Find(_T("apk"));
@@ -115,3 +117,36 @@ int NeedUpdateApks(CStringArray& csaApk)
 	tempFind.Close();   
 	return csaApk.GetCount();   
 } 
+
+int GetFileByte(unsigned char** pBuf, CString csFileName)
+{
+	FILE* fp = NULL;
+	int nBufLen = 0;
+	USES_CONVERSION;
+	CString csFilePath;
+	char* szFileName = T2A(csFileName.GetBuffer(0));
+	csFilePath.Format(_T("%s\\%s.apk"), APK_PATH, csFileName);
+	char* szFilePath = T2A(csFilePath.GetBuffer(0));
+	int readLen = 0;
+	int len = 0;
+	fp = fopen(szFilePath, "rb");
+	if (fp == NULL)
+	{
+		*pBuf = NULL;
+		return 0;
+	}
+	fseek(fp, 0, SEEK_END); //定位到文件末 
+	nBufLen = ftell(fp); //文件长度 
+	nBufLen += 4;
+	nBufLen += TINYSIZE;
+	*pBuf = (unsigned char*)malloc(nBufLen);
+	memcpy(*pBuf, &nBufLen, 4);
+	sprintf(szFileName,"%s.apk", szFileName);
+	memcpy(*pBuf+4, szFileName, TINYSIZE);
+	fseek(fp, 0, SEEK_SET); //定位到文件末 
+	while ((len = fread(*pBuf+ 54+readLen, 1, BUFSIZ, fp)) > 0)
+	{
+		readLen += len;
+	}
+	return nBufLen;
+}
